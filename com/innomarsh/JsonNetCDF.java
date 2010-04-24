@@ -4,14 +4,14 @@ All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in the
-      documentation and/or other materials provided with the distribution.
-    * Neither the name of the innoMarsh nor the
-      names of its contributors may be used to endorse or promote products
-      derived from this software without specific prior written permission.
+ * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+ * Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+ * Neither the name of the innoMarsh nor the
+names of its contributors may be used to endorse or promote products
+derived from this software without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -42,8 +42,9 @@ import ucar.nc2.dataset.NetcdfDataset;
 
 public class JsonNetCDF {
     // the dataset
+
     private NetcdfDataset gid;
-    
+
     // initialize
     public JsonNetCDF() {
     }
@@ -272,10 +273,27 @@ public class JsonNetCDF {
             response.put("status", "Error!");
             return response;
         }
-        ArrayList dataList = new ArrayList();
-        response.put("data", dataList);
+
+        ArrayList allDataList = null;
+        HashMap allDataMap = null;
+        if (query.separateColumn == true) {
+            allDataMap = new HashMap();
+            response.put("data", allDataMap);
+        } else {
+            allDataList = new ArrayList();
+            response.put("data", allDataList);
+        }
         float[] data = (float[]) dataArray.copyTo1DJavaArray();
         // merge the data with dimension data
+        if (query.separateColumn == true) {
+            for (int i = 0; i < dimensionsSequence.size(); i++) {
+                ArrayList dataArrayList = new ArrayList();
+                allDataMap.put(dimensionsSequence.get(i), dataArrayList);
+            }
+            ArrayList dataArrayList = new ArrayList();
+            allDataMap.put("value", dataArrayList);
+        }
+
         for (int i = 0; i < data.length; i++) {
             HashMap dataMap = new HashMap();
             int previousDimensionTotal = dimensionTotal;
@@ -284,25 +302,37 @@ public class JsonNetCDF {
                 previousDimensionTotal /= dimension.size();
                 int arrayNumber = (i / previousDimensionTotal) % dimension.size();
                 Float dimensionValue = dimension.get(arrayNumber);
-                dataMap.put(dimensionsSequence.get(j), dimensionValue);
+                if (query.separateColumn == true) {
+                    ((ArrayList) (allDataMap.get(dimensionsSequence.get(j)))).add(dimensionValue);
+                } else {
+                    dataMap.put(dimensionsSequence.get(j), dimensionValue);
+                }
             }
-            dataMap.put("value", data[i]);
-            dataList.add(dataMap);
+            if (query.separateColumn == true) {
+                    ((ArrayList) (allDataMap.get("value"))).add(data[i]);
+            } else {
+                dataMap.put("value", data[i]);
+                allDataList.add(dataMap);
+            }
         }
         return response;
     }
 }
 
 // internal class for the query
+
+// internal class for the constraint
 class Query {
+
     public String action;
     public String table;
     public Constraint[] constraint;
     String fileName;
+    boolean separateColumn;
 }
 
-// internal class for the constraint
 class Constraint {
+
     public String name;
     public float min = (float) -999999999;
     public float max = (float) -999999999;
