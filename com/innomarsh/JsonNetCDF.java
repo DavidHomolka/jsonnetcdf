@@ -207,7 +207,9 @@ public class JsonNetCDF {
                 if (query.constraint != null) {
                     for (int j = 0; j < query.constraint.length; j++) {
                         // max cannot be smaller than min
-                        if ((query.constraint[j].min != (float) -999999999) && (query.constraint[j].max != (float) -999999999) && (query.constraint[j].max < query.constraint[j].min)) {
+                        if ((query.constraint[j].min != (float) -999999999) &&
+                                (query.constraint[j].max != (float) -999999999) &&
+                                (query.constraint[j].max < query.constraint[j].min)) {
                             response.put("status", "Error!");
                             response.put("reason", "max cannot be smaller than min!");
                             return response;
@@ -218,22 +220,26 @@ public class JsonNetCDF {
                             boolean hasSetMax = false;
                             if (values.get(values.size() - 1) > values.get(0)) {
                                 for (int k = 0; k < values.size(); k++) {
-                                    if ((query.constraint[j].min != (float) -999999999) && (values.get(k) < query.constraint[j].min)) {
+                                    if ((query.constraint[j].min != (float) -999999999) &&
+                                            (values.get(k) < query.constraint[j].min)) {
                                         min = k + 1;
                                     }
-                                    if ((!hasSetMax) && (query.constraint[j].max != (float) -999999999) && (values.get(k) > query.constraint[j].max)) {
+                                    if ((!hasSetMax) && (query.constraint[j].max != (float) -999999999) &&
+                                            (values.get(k) > query.constraint[j].max)) {
                                         max = k - 1;
                                         hasSetMax = true;
                                     }
                                 }
                             } else {
                                 for (int k = (values.size() - 1); k >= 0; k--) {
-                                    if ((!hasSetMin) && (query.constraint[j].min != (float) -999999999) && (values.get(k) < query.constraint[j].min)) {
-                                        min = k - 1;
-                                        hasSetMin = true;
+                                    if ((query.constraint[j].min != (float) -999999999) &&
+                                            (values.get(k) < query.constraint[j].min)) {
+                                        max = k - 1;
                                     }
-                                    if ((query.constraint[j].max != (float) -999999999) && (values.get(k) > query.constraint[j].max)) {
-                                        max = k + 1;
+                                    if ((!hasSetMin) && (query.constraint[j].max != (float) -999999999) &&
+                                            (values.get(k) > query.constraint[j].max)) {
+                                        min = k + 1;
+                                        hasSetMin = true;
                                     }
                                 }
                             }
@@ -309,7 +315,7 @@ public class JsonNetCDF {
                 }
             }
             if (query.separateColumn == true) {
-                    ((ArrayList) (allDataMap.get("value"))).add(data[i]);
+                ((ArrayList) (allDataMap.get("value"))).add(data[i]);
             } else {
                 dataMap.put("value", data[i]);
                 allDataList.add(dataMap);
@@ -320,8 +326,6 @@ public class JsonNetCDF {
 }
 
 // internal class for the query
-
-// internal class for the constraint
 class Query {
 
     public String action;
@@ -331,6 +335,7 @@ class Query {
     boolean separateColumn;
 }
 
+// internal class for the constraint
 class Constraint {
 
     public String name;
