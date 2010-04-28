@@ -71,6 +71,9 @@ public class JsonNetCDF {
     public String query(String queryJSON) {
         Gson gson = new Gson();
         Query query = gson.fromJson(queryJSON, Query.class);
+        if (query.action == null){
+            return "{status: 'error!, reason: 'no action specified!'}";
+        }
         if (query.action.equals("getTable")) {
             // get the table info
             if (gid == null) {
@@ -102,7 +105,7 @@ public class JsonNetCDF {
             }
             return "{type: 'close', status: 'ok'}";
         }
-        return "";
+        return "{status: 'error!, reason: 'no such action!'}";
     }
 
     private HashMap getTable(Query query, NetcdfDataset gid, NetcdfFile gidFile) {
