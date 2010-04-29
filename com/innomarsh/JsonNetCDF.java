@@ -70,7 +70,12 @@ public class JsonNetCDF {
     // query type handler
     public String query(String queryJSON) {
         Gson gson = new Gson();
-        Query query = gson.fromJson(queryJSON, Query.class);
+        Query query = null;
+        try{
+            query = gson.fromJson(queryJSON, Query.class);
+        }catch(Exception e){
+            return "{status: 'error!, reason: 'format error!'}";
+        }
         if (query.action == null){
             return "{status: 'error!, reason: 'no action specified!'}";
         }
@@ -318,9 +323,17 @@ public class JsonNetCDF {
                 }
             }
             if (query.separateColumn == true) {
-                ((ArrayList) (allDataMap.get("value"))).add(data[i]);
+                if(((Float)(data[i])).isNaN()){
+                    ((ArrayList) (allDataMap.get("value"))).add("NaN");
+                }else{
+                    ((ArrayList) (allDataMap.get("value"))).add(data[i]);
+                }
             } else {
-                dataMap.put("value", data[i]);
+                if(((Float)(data[i])).isNaN()){
+                    dataMap.put("value", "NaN");
+                }else{
+                    dataMap.put("value", data[i]);
+                }
                 allDataList.add(dataMap);
             }
         }
