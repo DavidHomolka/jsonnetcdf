@@ -72,27 +72,27 @@ public class JsonNetCDF {
         Gson gson = new Gson();
         Query query = null;
         if (queryJSON.replaceAll(" ", "").equals("")){
-            return "{status: 'error!, reason: 'format error!'}";
+            return "{\"status\": \"error!\", \"reason\": \"format error!\"}";
         }
         try{
             query = gson.fromJson(queryJSON, Query.class);
         }catch(Exception e){
-            return "{status: 'error!, reason: 'format error!'}";
+            return "{\"status\": \"error!\", \"reason\": \"format error!\"}";
         }
         if (query.action == null){
-            return "{status: 'error!, reason: 'no action specified!'}";
+            return "{\"status\": \"error!\", \"reason\": \"no action specified!\"}";
         }
         if (query.action.equals("getTable")) {
             // get the table info
             if (gid == null) {
-                return "{status: 'error!, reason: 'no file opened'}";
+                return "{\"status\": \"error!\", \"reason\": \"no file opened\"}";
             }
             NetcdfFile gidFile = gid.getReferencedFile();
             return gson.toJson(getTable(query, gid, gidFile));
         } else if ((query.action.equals("getData"))||(query.action.equals("getRange"))) {
             // get the data from table
             if (gid == null) {
-                return "{status: 'error!, reason: 'no file opened'}";
+                return "{\"status\": \"error!\", \"reason\": \"no file opened\"}";
             }
             NetcdfFile gidFile = gid.getReferencedFile();
             return gson.toJson(getData(query, gid, gidFile));
@@ -101,19 +101,19 @@ public class JsonNetCDF {
             try {
                 this.open(query.fileName);
             } catch (IOException ex) {
-                return "{status: 'error!', reason: 'fail to open file'}";
+                return "{\"status\": \"error!\", \"reason\": \"fail to open file\"}";
             }
-            return "{type: 'open', status: 'ok'}";
+            return "{\"type\": \"open\", \"status\": \"ok\"}";
         } else if (query.action.equals("close")) {
             // close file
             try {
                 gid.close();
             } catch (IOException ex) {
-                return "{status: 'error!', reason: 'fail to close file'}";
+                return "{\"status\": \"error!\", \"reason\": \"fail to close file\"}";
             }
-            return "{type: 'close', status: 'ok'}";
+            return "{\"type\": \"close\", \"status\": \"ok\"}";
         }
-        return "{status: 'error!, reason: 'no such action!'}";
+        return "{\"status\": \"error!\", \"reason\": \"no such action!\"}";
     }
 
     private HashMap getTable(Query query, NetcdfDataset gid, NetcdfFile gidFile) {
