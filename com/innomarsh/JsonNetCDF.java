@@ -71,6 +71,9 @@ public class JsonNetCDF {
     public String query(String queryJSON) {
         Gson gson = new Gson();
         Query query = null;
+        if (queryJSON.replaceAll(" ", "").equals("")){
+            return "{status: 'error!, reason: 'format error!'}";
+        }
         try{
             query = gson.fromJson(queryJSON, Query.class);
         }catch(Exception e){
@@ -86,7 +89,7 @@ public class JsonNetCDF {
             }
             NetcdfFile gidFile = gid.getReferencedFile();
             return gson.toJson(getTable(query, gid, gidFile));
-        } else if (query.action.equals("getData")) {
+        } else if ((query.action.equals("getData"))||(query.action.equals("getRange"))) {
             // get the data from table
             if (gid == null) {
                 return "{status: 'error!, reason: 'no file opened'}";
@@ -178,7 +181,11 @@ public class JsonNetCDF {
 
     private HashMap getData(Query query, NetcdfDataset gid, NetcdfFile gidFile) {
         HashMap response = new HashMap();
-        response.put("type", "data");
+        if (query.action.equals("getData")){
+            response.put("type", "data");
+        }else if (query.action.equals("getRange")){
+            response.put("type", "range");
+        }
         // table name must be given
         if ((query.table == null) || (query.table.equals(""))) {
             response.put("status", "Error!");
@@ -214,6 +221,12 @@ public class JsonNetCDF {
                 //check constraint, they are in 'AND' relationships
                 if (query.constraint != null) {
                     for (int j = 0; j < query.constraint.length; j++) {
+                        // There must be min or max for a constraint
+                        if ((query.constraint[j].min == (float) -999999999)&&(query.constraint[j].max == (float) -999999999)) {
+                            response.put("status", "Error!");
+                            response.put("reason", "There must be min or max for a constraint!");
+                            return response;
+                        }
                         // max cannot be smaller than min
                         if ((query.constraint[j].min != (float) -999999999) &&
                                 (query.constraint[j].max != (float) -999999999) &&
@@ -269,6 +282,12 @@ public class JsonNetCDF {
                     response.put("reason", "out of range");
                     return response;
                 }
+            }
+            // if the query only the range, return here
+            if (query.action.equals("getRange")){
+                response.put("dimensions", dimensionsSequence);
+                response.put("data", ranges.toString().replaceAll("\\[","").replaceAll("\\]",""));
+                return response;
             }
             // calculate for next step
             for (int i = 0; i < dimensionsSequence.size(); i++) {
