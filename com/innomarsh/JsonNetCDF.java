@@ -286,7 +286,7 @@ public class JsonNetCDF {
             // if the query only the range, return here
             if (query.action.equals("getRange")){
                 response.put("dimensions", dimensionsSequence);
-                response.put("data", ranges.toString().replaceAll("\\[","").replaceAll("\\]",""));
+                response.put("data", ranges.toString().replaceAll("\\[","").replaceAll("\\]","").replaceAll(" ",""));
                 return response;
             }
             // calculate for next step
