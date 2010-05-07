@@ -71,15 +71,15 @@ public class JsonNetCDF {
     public String query(String queryJSON) {
         Gson gson = new Gson();
         Query query = null;
-        if (queryJSON.replaceAll(" ", "").equals("")){
+        if (queryJSON.replaceAll(" ", "").equals("")) {
             return "{\"status\": \"error!\", \"reason\": \"format error!\"}";
         }
-        try{
+        try {
             query = gson.fromJson(queryJSON, Query.class);
-        }catch(Exception e){
+        } catch (Exception e) {
             return "{\"status\": \"error!\", \"reason\": \"format error!\"}";
         }
-        if (query.action == null){
+        if (query.action == null) {
             return "{\"status\": \"error!\", \"reason\": \"no action specified!\"}";
         }
         if (query.action.equals("getTable")) {
@@ -89,13 +89,13 @@ public class JsonNetCDF {
             }
             NetcdfFile gidFile = gid.getReferencedFile();
             return gson.toJson(getTable(query, gid, gidFile));
-        } else if ((query.action.equals("getData"))||(query.action.equals("getRange"))) {
+        } else if ((query.action.equals("getData")) || (query.action.equals("getRange"))) {
             // get the data from table
             if (gid == null) {
                 return "{\"status\": \"error!\", \"reason\": \"no file opened\"}";
             }
             NetcdfFile gidFile = gid.getReferencedFile();
-            return gson.toJson(getData(query, gid, gidFile));
+            return (getData(query, gid, gidFile).toString());
         } else if (query.action.equals("open")) {
             // open file
             try {
@@ -179,20 +179,23 @@ public class JsonNetCDF {
         return response;
     }
 
-    private HashMap getData(Query query, NetcdfDataset gid, NetcdfFile gidFile) {
-        HashMap response = new HashMap();
-        if (query.action.equals("getData")){
-            response.put("type", "data");
-        }else if (query.action.equals("getRange")){
-            response.put("type", "range");
+    private StringBuilder getData(Query query, NetcdfDataset gid, NetcdfFile gidFile) {
+        StringBuilder response = new StringBuilder();
+        response.append("{");
+        if (query.action.equals("getData")) {
+            response.append("\"type\":\"data\",");
+        } else if (query.action.equals("getRange")) {
+            response.append("\"type\":\"range\",");
         }
         // table name must be given
         if ((query.table == null) || (query.table.equals(""))) {
-            response.put("status", "Error!");
-            response.put("reason", "no table name");
+            response.append("\"status\":\"Error!\",");
+            response.append("\"reason\":\"no table name\"}");
             return response;
         }
-        response.put("table", query.table);
+        response.append("\"table\":\"");
+        response.append(query.table.replaceAll("\"", "\\\\\""));
+        response.append("\",");
         Array dataArray;
         int dimensionTotal = 1;
         ArrayList dimensionsSequence = new ArrayList();
@@ -203,8 +206,8 @@ public class JsonNetCDF {
             try {
                 dimensions = gid.findVariable(query.table).getDimensions();
             } catch (Exception e) {
-                response.put("status", "Error!");
-                response.put("reason", "no such table");
+                response.append("\"status\":\"Error!\",");
+                response.append("\"reason\":\"no such table\"}");
                 return response;
             }
             ArrayList ranges = new ArrayList();
@@ -222,17 +225,17 @@ public class JsonNetCDF {
                 if (query.constraint != null) {
                     for (int j = 0; j < query.constraint.length; j++) {
                         // There must be min or max for a constraint
-                        if ((query.constraint[j].min == (float) -999999999)&&(query.constraint[j].max == (float) -999999999)) {
-                            response.put("status", "Error!");
-                            response.put("reason", "There must be min or max for a constraint!");
+                        if ((query.constraint[j].min == (float) -999999999) && (query.constraint[j].max == (float) -999999999)) {
+                            response.append("\"status\":\"Error!\",");
+                            response.append("\"reason\":\"There must be min or max for a constraint!\"}");
                             return response;
                         }
                         // max cannot be smaller than min
                         if ((query.constraint[j].min != (float) -999999999) &&
                                 (query.constraint[j].max != (float) -999999999) &&
                                 (query.constraint[j].max < query.constraint[j].min)) {
-                            response.put("status", "Error!");
-                            response.put("reason", "max cannot be smaller than min!");
+                            response.append("\"status\":\"Error!\",");
+                            response.append("\"reason\":\"max cannot be smaller than min!\"}");
                             return response;
                         }
 
@@ -278,15 +281,18 @@ public class JsonNetCDF {
                 try {
                     ranges.add(new Range(min, max));
                 } catch (InvalidRangeException ex) {
-                    response.put("status", "Error!");
-                    response.put("reason", "out of range");
+                    response.append("\"status\":\"Error!\",");
+                    response.append("\"reason\":\"out of range\"}");
                     return response;
                 }
             }
             // if the query only the range, return here
-            if (query.action.equals("getRange")){
-                response.put("dimensions", dimensionsSequence);
-                response.put("data", ranges.toString().replaceAll("\\[","").replaceAll("\\]","").replaceAll(" ",""));
+            if (query.action.equals("getRange")) {
+                response.append("\"dimensions\":\"");
+                response.append(dimensionsSequence.toString());
+                response.append("\",\"data\":\"");
+                response.append(ranges.toString());
+                response.append("\"}");
                 return response;
             }
             // calculate for next step
@@ -298,64 +304,94 @@ public class JsonNetCDF {
             try {
                 dataArray = gid.findVariable(query.table).read(ranges);
             } catch (InvalidRangeException ex) {
-                response.put("status", "Error!");
-                response.put("reason", "no revelant table");
+                response.append("\"status\":\"Error!\",");
+                response.append("\"reason\":\"no revelant table\"}");
                 return response;
             }
         } catch (IOException ex) {
-            response.put("status", "Error!");
+            response.append("\"status\":\"Error!\"}");
             return response;
         }
 
-        ArrayList allDataList = null;
         HashMap allDataMap = null;
+        HashMap dimensionsStringBuilder = null;
+        response.append("\"data\":");
         if (query.separateColumn == true) {
+            response.append("{");
             allDataMap = new HashMap();
-            response.put("data", allDataMap);
+            dimensionsStringBuilder = new HashMap();
         } else {
-            allDataList = new ArrayList();
-            response.put("data", allDataList);
+            response.append("[");
         }
+        
         float[] data = (float[]) dataArray.copyTo1DJavaArray();
+
         // merge the data with dimension data
         if (query.separateColumn == true) {
             for (int i = 0; i < dimensionsSequence.size(); i++) {
-                ArrayList dataArrayList = new ArrayList();
-                allDataMap.put(dimensionsSequence.get(i), dataArrayList);
+                dimensionsStringBuilder.put(dimensionsSequence.get(i), new StringBuilder());
             }
             ArrayList dataArrayList = new ArrayList();
             allDataMap.put("value", dataArrayList);
         }
 
+        StringBuilder dataStringBuilder = new StringBuilder();
         for (int i = 0; i < data.length; i++) {
-            HashMap dataMap = new HashMap();
             int previousDimensionTotal = dimensionTotal;
+            if (query.separateColumn != true) {
+                response.append("{");
+            }
             for (int j = 0; j < dimensionsSequence.size(); j++) {
                 ArrayList<Float> dimension = ((ArrayList<Float>) dimensionsList.get(dimensionsSequence.get(j)));
                 previousDimensionTotal /= dimension.size();
                 int arrayNumber = (i / previousDimensionTotal) % dimension.size();
                 Float dimensionValue = dimension.get(arrayNumber);
                 if (query.separateColumn == true) {
-                    ((ArrayList) (allDataMap.get(dimensionsSequence.get(j)))).add(dimensionValue);
+                    StringBuilder stringBuilder = (StringBuilder) dimensionsStringBuilder.get(dimensionsSequence.get(j));
+                    stringBuilder.append(dimensionValue);
+                    stringBuilder.append(",");
                 } else {
-                    dataMap.put(dimensionsSequence.get(j), dimensionValue);
+                    //dataMap.put(dimensionsSequence.get(j), dimensionValue);
+                    response.append("\"");
+                    response.append(dimensionsSequence.get(j));
+                    response.append("\":");
+                    response.append(dimensionValue);
+                    response.append(",");
                 }
             }
             if (query.separateColumn == true) {
-                if(((Float)(data[i])).isNaN()){
-                    ((ArrayList) (allDataMap.get("value"))).add("NaN");
-                }else{
-                    ((ArrayList) (allDataMap.get("value"))).add(data[i]);
+                if (((Float) (data[i])).isNaN()) {
+                    dataStringBuilder.append("\"NaN\",");
+                } else {
+                    dataStringBuilder.append(data[i]);
+                    dataStringBuilder.append(",");
                 }
             } else {
-                if(((Float)(data[i])).isNaN()){
-                    dataMap.put("value", "NaN");
-                }else{
-                    dataMap.put("value", data[i]);
+                response.append("\"value\":");
+                if (((Float) (data[i])).isNaN()) {
+                    response.append("\"NaN\"");
+                } else {
+                    response.append(data[i]);
                 }
-                allDataList.add(dataMap);
+                response.append("},");
             }
         }
+
+        // put the dimension data
+        if (query.separateColumn == true) {
+            for (int j = 0; j < dimensionsStringBuilder.size(); j++){
+                response.append("\"" + dimensionsSequence.get(j) + "\":");
+                StringBuilder stringBuilder =(StringBuilder)dimensionsStringBuilder.get(dimensionsSequence.get(j));
+                response.append("[" + stringBuilder.deleteCharAt(stringBuilder.length() - 1) + "],");
+            }
+            response.append("\"value\":");
+            response.append("[" + dataStringBuilder.deleteCharAt(dataStringBuilder.length() - 1) + "]");
+            response.append("}");
+        }else{
+            response.deleteCharAt(response.length() - 1);
+            response.append("]");
+        }
+        response.append("}");
         return response;
     }
 }
